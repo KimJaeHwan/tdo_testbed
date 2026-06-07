@@ -14,7 +14,6 @@ DataFlowBench의 목적은 Ghidra High PCode 기반 Backward Slice / Data Flow T
 - Source/Sink 함수
 - 케이스별 함수 구조
 - 함수별 input/output 관계를 분리해 검증할 수 있는 summary-friendly 함수 케이스
-- direct-trace 전용 케이스와 function-summary-ready 케이스의 명시적 구분
 - 빌드 시스템
 - expected JSON
 - 실행 방식
@@ -612,49 +611,6 @@ int main(int argc, char **argv) {
 }
 ```
 
-### 5.1 Function-summary-ready 케이스 규칙
-
-함수별 input/output DB 구축에 사용하는 케이스는 일반 direct-trace 케이스와 별도로 더 강한 규칙을 따라야 한다.
-
-핵심 원칙:
-
-```text
-1. direct-trace 검증용 케이스와 function-summary-ready 케이스를 같은 의미로 취급하지 않는다.
-2. function-summary-ready 케이스에서는 어느 한 함수 안에도 직접 source와 sink가 동시에 공존하면 안 된다.
-3. 실제 데이터 전달 관계는 별도 helper/callee 함수 안에 존재해야 한다.
-4. summary 대상 helper 함수 내부에는 직접 source나 sink를 두지 않는다.
-5. case_DFBxxx_* wrapper는 source 준비 함수, helper 호출, sink 전달 함수만 조합하는 orchestration 역할만 맡는다.
-6. 함수 요약 DB의 ground truth는 summary-ready 케이스만을 기준으로 만든다.
-```
-
-권장 패턴:
-
-```c
-static int dfb_prepare_input(void) {
-    return dfb_source_A();
-}
-
-static int dfb_summary_target(const SomeType *in) {
-    return in->field;
-}
-
-static void dfb_consume_output(int value) {
-    dfb_sink_int(value);
-}
-
-DFB_CASE void case_DFBxxx_example(void) {
-    SomeType value;
-    value.field = dfb_prepare_input();
-    value.other = 0;
-
-    dfb_consume_output(dfb_summary_target(&value));
-}
-```
-
-위 패턴에서 source 준비 함수, summary 함수, sink 전달 함수가 서로 분리된다. 따라서 단일 추적 검증과 함수 summary DB 검증을 동시에 지원하면서도, 어느 한 함수에도 source와 sink를 같이 두지 않을 수 있다.
-
----
-
 ## 6. 최소 Core Cases
 
 이 섹션의 케이스는 반드시 v1에서 구현한다.
@@ -1237,8 +1193,6 @@ idx가 variable offset이므로 분석기는 arr 전체를 conservative하게 me
 
 이 케이스는 중첩 구조체와 배열이 결합된 offset을 field-sensitive하게 추적할 수 있는지 확인한다.
 
-함수 summary DB 구축도 고려하므로, 실제 field 선택은 별도 helper 함수에서 수행한다.
-
 ```c
 #include "dfbench_sources_sinks.h"
 
@@ -1252,36 +1206,26 @@ typedef struct DFBOuter {
     DFBInner inner;
 } DFBOuter;
 
-static int dfb_read_nested_selected_value(const DFBOuter *obj) {
-    return obj->inner.values[1];
-}
-
 DFB_CASE void case_DFB045_nested_aggregate_field(void) {
     DFBOuter obj = {0};
 
     obj.inner.values[0] = dfb_source_B();
     obj.inner.values[1] = dfb_source_A();
 
-    dfb_sink_int(dfb_read_nested_selected_value(&obj));
+    dfb_sink_int(obj.inner.values[1]);
 }
 ```
 
 기대 흐름:
 
 ```text
-dfb_source_A.ret -> caller obj.inner.values[1] -> callee.arg0.inner.values[1] -> callee.ret -> dfb_sink_int.arg0
+dfb_source_A.ret -> obj.inner.values[1] -> dfb_sink_int.arg0
 ```
 
 금지 흐름:
 
 ```text
 dfb_source_B.ret must not reach sink
-```
-
-권장 summary:
-
-```text
-dfb_read_nested_selected_value: arg0.inner.values[1] -> ret
 ```
 
 ---
@@ -1380,26 +1324,14 @@ DFB_SOURCE int dfb_same_identity(int x) {
     return x;
 }
 
-static int dfb_callsite_context_source_A(void) {
-    return dfb_source_A();
-}
-
-static int dfb_callsite_context_source_B(void) {
-    return dfb_source_B();
-}
-
-static void dfb_callsite_context_sink(int value) {
-    dfb_sink_int(value);
-}
-
 DFB_CASE void case_DFB052_callsite_context(void) {
-    int a = dfb_callsite_context_source_A();
-    int b = dfb_callsite_context_source_B();
+    int a = dfb_source_A();
+    int b = dfb_source_B();
 
     int x = dfb_same_identity(a);
     int y = dfb_same_identity(b);
 
-    dfb_callsite_context_sink(x);
+    dfb_sink_int(x);
 
     /* y가 제거되지 않도록 사용 */
     DFB_TOUCH_INT(y);
@@ -1409,19 +1341,13 @@ DFB_CASE void case_DFB052_callsite_context(void) {
 기대 흐름:
 
 ```text
-dfb_source_A.ret -> dfb_callsite_context_source_A.ret -> selected callsite arg0 -> dfb_same_identity.arg0 -> dfb_same_identity.ret -> dfb_callsite_context_sink.arg0 -> dfb_sink_int.arg0
+dfb_source_A.ret -> sink
 ```
 
 금지 흐름:
 
 ```text
-dfb_source_B.ret -> dfb_callsite_context_source_B.ret -> unselected callsite arg0 -> dfb_same_identity.arg0 -> dfb_same_identity.ret must not reach dfb_sink_int.arg0
-```
-
-권장 summary:
-
-```text
-dfb_same_identity: arg0 -> ret
+dfb_source_B.ret must not reach sink
 ```
 
 ---
