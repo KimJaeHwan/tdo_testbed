@@ -1,4 +1,4 @@
-# DataFlowBench 개발 설계서 V3
+﻿# DataFlowBench 개발 설계서 V3
 
 ## 0. 문서 목적
 
@@ -44,7 +44,7 @@ V3의 목적은 V2에서 이미 정의된 케이스를 변경하지 않고, 이 
 V3 원칙:
 
 ```text
-1. DFB001~DFB131의 케이스 의미와 기대 흐름은 V2 기준을 유지한다.
+1. 문서에 정의된 모든 DFB 케이스의 의미와 기대 흐름은 V2 기준을 유지한다.
 2. V3는 케이스 추가/삭제보다 구현 절차, 산출물 소유권, 생성 규칙, 검증 규칙을 명확히 한다.
 3. v1 완료를 위해 새로운 필수 DFB ID를 추가하지 않는다.
 4. 구현자는 수기 문서 예시보다 manifest와 생성 규칙을 정답으로 따라야 한다.
@@ -107,10 +107,54 @@ v1 구현 기준에서 각 케이스는 아래 실행파일에 속한다.
 
 ```text
 dfbench_win_core:
-    DFB001~DFB073
+    DFB001
+    DFB002
+    DFB003
+    DFB010
+    DFB011
+    DFB012
+    DFB020
+    DFB021
+    DFB022
+    DFB023
+    DFB024
+    DFB025
+    DFB026
+    DFB030
+    DFB031
+    DFB040
+    DFB041
+    DFB042
+    DFB043
+    DFB044
+    DFB045
+    DFB046
+    DFB050
+    DFB051
+    DFB052
+    DFB053
+    DFB054
+    DFB055
+    DFB056
+    DFB057
+    DFB058
+    DFB059
+    DFB060
+    DFB070
+    DFB071
+    DFB072
+    DFB073
     DFB091
-    DFB100~DFB123
-    DFB130~DFB131
+    DFB100
+    DFB101
+    DFB102
+    DFB110
+    DFB120
+    DFB121
+    DFB122
+    DFB123
+    DFB130
+    DFB131
 
 dfbench_posix_runtime:
     DFB090
@@ -128,8 +172,10 @@ dfbench_cpp_exceptions:
 
 ```text
 - 위 소유권 표가 v1 구현의 기준이다.
+- 범위 표기 대신 실제 DFB ID를 모두 나열한다. 존재하지 않는 중간 번호를 생성하면 안 된다.
 - 아래 runtime 예시 코드 블록은 설명용 예시이며, 실제 산출물은 manifest에서 생성된 결과가 기준이다.
 - 어떤 케이스도 둘 이상의 binary에 동시에 등록하면 안 된다.
+- 특히 DFB111은 dfbench_cpp_exceptions에만 포함하며 dfbench_win_core에는 포함하지 않는다.
 ```
 
 지원 옵션:
@@ -244,7 +290,7 @@ dataflow-bench/
 │   └── generate_expected_template.py
 │
 ├── docs/
-│   ├── DataFlowBench_Design_FINAL_V2.md <- (this file)
+│   ├── DataFlowBench_DESIGN_FINAL_v3.md
 │   └── read_output_manual.md
 └── tests/
     └── smoke_test.py
@@ -328,6 +374,7 @@ Sink는 backward slice anchor로 사용된다.
 #define DFB_CASE DFB_EXPORT DFB_NOINLINE DFB_USED
 #define DFB_SOURCE DFB_EXPORT DFB_NOINLINE DFB_USED
 #define DFB_SINK DFB_EXPORT DFB_NOINLINE DFB_USED
+#define DFB_HELPER DFB_EXPORT DFB_NOINLINE DFB_USED
 
 #if defined(__cplusplus)
     #define DFB_EXTERN_C extern "C"
@@ -347,6 +394,28 @@ extern volatile int g_dfb_sink_int;
 extern volatile long g_dfb_sink_long;
 extern volatile uintptr_t g_dfb_sink_ptr;
 extern volatile int g_dfb_source_seed;
+```
+
+매크로 사용 규칙:
+
+```text
+DFB_SOURCE:
+    실제 분석 source 함수에만 사용한다.
+    예: dfb_source_A, dfb_source_B, dfb_source_C
+
+DFB_SINK:
+    실제 backward slice anchor sink 함수에만 사용한다.
+    예: dfb_sink_int, dfb_sink_long, dfb_sink_ptr
+
+DFB_CASE:
+    --list와 --run에서 직접 실행되는 case_DFBxxx_* 함수에만 사용한다.
+
+DFB_HELPER:
+    제거되면 안 되는 일반 helper 함수에 사용한다.
+    예: dfb_identity_int, dfb_copy_arg_to_out, dfb_summary_arg_to_ret
+
+주의:
+    helper 함수에 DFB_SOURCE를 붙이면 분석기나 manifest 생성기가 helper를 source로 오해할 수 있다.
 ```
 
 ---
@@ -850,7 +919,7 @@ DFB_CASE void case_DFB020_stack_local(void) {
 ### DFB021 stack out-param
 
 ```c
-DFB_SOURCE void dfb_write_source_to_out(int *out) {
+DFB_HELPER void dfb_write_source_to_out(int *out) {
     *out = dfb_source_A();
 }
 
@@ -872,7 +941,7 @@ dfb_source_A.ret -> *out -> local -> sink
 ### DFB022 arg to out-param
 
 ```c
-DFB_SOURCE void dfb_copy_arg_to_out(int in, int *out) {
+DFB_HELPER void dfb_copy_arg_to_out(int in, int *out) {
     *out = in;
 }
 
@@ -895,7 +964,7 @@ dfb_source_A.ret -> callee.arg0 -> callee.arg1* -> local -> sink
 ### DFB023 double pointer out-param
 
 ```c
-DFB_SOURCE void dfb_store_through_double_pointer(int **pp, int value) {
+DFB_HELPER void dfb_store_through_double_pointer(int **pp, int value) {
     **pp = value;
 }
 
@@ -990,12 +1059,12 @@ dfb_source_A.ret must not reach sink
 static volatile int g_dfb_global_main_value = 0;
 static volatile int g_dfb_global_shadow_value = 0;
 
-DFB_SOURCE void dfb_write_global_values(void) {
+DFB_HELPER void dfb_write_global_values(void) {
     g_dfb_global_main_value = dfb_source_A();
     g_dfb_global_shadow_value = dfb_source_B();
 }
 
-DFB_SOURCE int dfb_read_global_main_value(void) {
+DFB_HELPER int dfb_read_global_main_value(void) {
     return g_dfb_global_main_value;
 }
 
@@ -1023,6 +1092,8 @@ dfb_source_B.ret must not reach sink
 ## 8. Heap Cases
 
 파일: `src/cases_heap.c`
+
+### DFB030 heap field
 
 ```c
 #include <stdlib.h>
@@ -1350,7 +1421,7 @@ dfb_source_B.ret must not reach sink
 ```c
 #include "dfbench_sources_sinks.h"
 
-DFB_SOURCE int dfb_identity_int(int x) {
+DFB_HELPER int dfb_identity_int(int x) {
     return x;
 }
 
@@ -1366,15 +1437,15 @@ DFB_CASE void case_DFB050_identity_call(void) {
 ### DFB051 nested call
 
 ```c
-DFB_SOURCE int dfb_transform_int(int x) {
+DFB_HELPER int dfb_transform_int(int x) {
     return (x * 7) + 1;
 }
 
-DFB_SOURCE int dfb_nested_2(int x) {
+DFB_HELPER int dfb_nested_2(int x) {
     return dfb_transform_int(x);
 }
 
-DFB_SOURCE int dfb_nested_1(int x) {
+DFB_HELPER int dfb_nested_1(int x) {
     return dfb_nested_2(x);
 }
 
@@ -1392,7 +1463,7 @@ DFB_CASE void case_DFB051_nested_call(void) {
 이 케이스는 같은 callee가 서로 다른 source를 받았을 때 callsite 구분이 되는지 확인한다.
 
 ```c
-DFB_SOURCE int dfb_same_identity(int x) {
+DFB_HELPER int dfb_same_identity(int x) {
     return x;
 }
 
@@ -1436,7 +1507,7 @@ typedef struct DFBBigStruct {
     long d;
 } DFBBigStruct;
 
-DFB_SOURCE DFBBigStruct dfb_make_big_struct(long x) {
+DFB_HELPER DFBBigStruct dfb_make_big_struct(long x) {
     DFBBigStruct s;
     s.a = x;
     s.b = 0;
@@ -1465,7 +1536,7 @@ dfb_source_long_A.ret -> hidden sret / struct return -> s.a -> sink
 이 케이스는 함수 return value와 out-param이 분리된 흔한 API 패턴을 검증한다.
 
 ```c
-DFB_SOURCE int dfb_status_out_writer(int *out, int value) {
+DFB_HELPER int dfb_status_out_writer(int *out, int value) {
     *out = value;
     return 0;
 }
@@ -1575,7 +1646,7 @@ dfb_source_C.ret must not reach sink
 이 케이스는 가장 기본적인 함수 summary 패턴인 `arg0 -> return` 관계를 검증한다.
 
 ```c
-DFB_SOURCE int dfb_summary_arg_to_ret(int x) {
+DFB_HELPER int dfb_summary_arg_to_ret(int x) {
     return x;
 }
 
@@ -1619,7 +1690,7 @@ typedef struct DFBSummaryStruct {
     int other;
 } DFBSummaryStruct;
 
-DFB_SOURCE int dfb_summary_field_to_ret(const DFBSummaryStruct *v) {
+DFB_HELPER int dfb_summary_field_to_ret(const DFBSummaryStruct *v) {
     return v->chosen;
 }
 
@@ -1658,7 +1729,7 @@ dfb_summary_field_to_ret: arg0.chosen -> ret
 이 케이스는 `arg1 -> *arg0` 형태의 out-param summary를 검증한다.
 
 ```c
-DFB_SOURCE void dfb_summary_arg_to_out(int *out, int value) {
+DFB_HELPER void dfb_summary_arg_to_out(int *out, int value) {
     *out = value;
 }
 
@@ -1703,7 +1774,7 @@ typedef struct DFBInOutStruct {
     int noise;
 } DFBInOutStruct;
 
-DFB_SOURCE void dfb_summary_inout_update(DFBInOutStruct *v, int value) {
+DFB_HELPER void dfb_summary_inout_update(DFBInOutStruct *v, int value) {
     v->tracked = value;
 }
 
@@ -1742,8 +1813,10 @@ dfb_summary_inout_update: arg1 -> arg0.tracked*
 
 파일: `src/cases_interproc.c`에 함께 넣어도 된다.
 
+### DFB060 recursion
+
 ```c
-DFB_SOURCE int dfb_recursive_transform(int x, int n) {
+DFB_HELPER int dfb_recursive_transform(int x, int n) {
     if (n <= 0) {
         return x;
     }
@@ -1783,7 +1856,7 @@ visited 처리 검증
 
 typedef int (*dfb_int_fn_t)(int);
 
-DFB_SOURCE int dfb_fp_target(int x) {
+DFB_HELPER int dfb_fp_target(int x) {
     return x + 10;
 }
 
@@ -1804,11 +1877,11 @@ DFB_CASE void case_DFB070_function_pointer(void) {
 ```c
 static void (*g_dfb_callback)(int) = 0;
 
-DFB_SOURCE void dfb_register_callback(void (*cb)(int)) {
+DFB_HELPER void dfb_register_callback(void (*cb)(int)) {
     g_dfb_callback = cb;
 }
 
-DFB_SOURCE void dfb_callback_target(int x) {
+DFB_HELPER void dfb_callback_target(int x) {
     dfb_sink_int(x);
 }
 
@@ -1834,11 +1907,11 @@ dfb_source_A.ret -> indirect callback arg -> dfb_sink_int.arg0
 ### DFB072 function pointer table
 
 ```c
-DFB_SOURCE int dfb_fp_table_target_A(int x) {
+DFB_HELPER int dfb_fp_table_target_A(int x) {
     return x + 1;
 }
 
-DFB_SOURCE int dfb_fp_table_target_B(int x) {
+DFB_HELPER int dfb_fp_table_target_B(int x) {
     return x + 2;
 }
 
@@ -2138,7 +2211,7 @@ thread dispatch와 indirect call을 함께 풀지 못하는 분석기는 WARN �
 #include <stdarg.h>
 #include "dfbench_sources_sinks.h"
 
-DFB_SOURCE int dfb_pick_first_vararg(const char *fmt, ...) {
+DFB_HELPER int dfb_pick_first_vararg(const char *fmt, ...) {
     (void)fmt;
 
     va_list ap;
@@ -2169,11 +2242,11 @@ dfb_source_A.ret -> vararg slot -> va_arg -> ret -> sink
 이 케이스는 최적화 빌드에서 tail call 형태가 될 수 있다.
 
 ```c
-DFB_SOURCE int dfb_tail_target(int x) {
+DFB_HELPER int dfb_tail_target(int x) {
     return x;
 }
 
-DFB_SOURCE int dfb_tail_wrapper(int x) {
+DFB_HELPER int dfb_tail_wrapper(int x) {
     return dfb_tail_target(x);
 }
 
@@ -2239,7 +2312,7 @@ dfb_source_B.ret must not reach sink
 static jmp_buf g_jmp_buf;
 static volatile int g_jmp_value = 0;
 
-DFB_SOURCE void dfb_longjmp_writer(int x) {
+DFB_HELPER void dfb_longjmp_writer(int x) {
     g_jmp_value = x;
     longjmp(g_jmp_buf, 1);
 }
@@ -2499,12 +2572,12 @@ expected metadata는 실행파일별로 분리한다.
 ```json
 {
   "schema_version": 1,
-    "program": "dfbench_win_core",
-    "generated_from": "manifests/cases_manifest.json",
+  "program": "dfbench_win_core",
+  "generated_from": "manifests/cases_manifest.json",
   "cases": [
     {
       "id": "DFB001",
-            "binary": "dfbench_win_core",
+      "binary": "dfbench_win_core",
       "function": "case_DFB001_direct_value",
       "anchor": {
         "callee": "dfb_sink_int",
@@ -2672,6 +2745,78 @@ expected_features
 allowed_warnings
 ```
 
+필드 타입과 허용값:
+
+```text
+schema_version:
+    integer. v1에서는 1만 허용한다.
+
+binaries[].name:
+    string. 아래 네 값 중 하나여야 한다.
+    dfbench_win_core
+    dfbench_posix_runtime
+    dfbench_cpp
+    dfbench_cpp_exceptions
+
+binaries[].platform:
+    string. windows, posix 중 하나를 사용한다.
+
+binaries[].kind:
+    string. core_c, runtime_bridge, cpp, cpp_exceptions 중 하나를 사용한다.
+
+binaries[].runtime_file:
+    string. 생성될 runtime registry 파일 경로다.
+
+binaries[].expected_file:
+    string. 생성될 expected JSON 파일 경로다.
+
+cases[].id:
+    string. DFB 다음에 3자리 숫자가 오는 형식만 허용한다.
+
+cases[].name:
+    string. g_cases[]의 name에 들어갈 짧은 이름이다.
+
+cases[].binary:
+    string. binaries[].name 중 하나와 정확히 일치해야 한다.
+
+cases[].source_file:
+    string. 케이스 함수가 구현된 C/C++ 파일 경로다.
+
+cases[].function:
+    string. case_DFBxxx_* 형식의 실제 케이스 함수명이다.
+
+cases[].anchor:
+    object. callee와 arg_index를 반드시 가진다.
+
+cases[].anchor.callee:
+    string. backward slice 시작점이 되는 sink 함수명이다.
+
+cases[].anchor.arg_index:
+    integer. 0부터 시작하는 sink 인자 번호다.
+
+cases[].expected_sources:
+    string array. 반드시 도달해야 하는 source 목록이다.
+
+cases[].forbidden_sources:
+    string array. 도달하면 안 되는 source 목록이다. 없으면 빈 배열로 둔다.
+
+cases[].expected_features:
+    string array. 비교기나 리포트가 참고할 기능 태그다.
+
+cases[].allowed_warnings:
+    string array. 허용 가능한 WARN 태그다. 없으면 빈 배열로 둔다.
+```
+
+완성 규칙:
+
+```text
+1. v1 manifest에는 문서에 정의된 모든 DFB 케이스가 빠짐없이 들어가야 한다.
+2. manifest는 예시 두 개만 작성하고 끝내면 안 된다.
+3. 각 case의 expected_sources와 forbidden_sources는 문서의 기대 흐름/금지 흐름을 그대로 옮긴다.
+4. expected_features와 allowed_warnings는 generator가 임의로 추론하지 않는다. manifest에 명시된 값만 사용한다.
+5. validate_manifest.py는 없는 DFB ID, 중복 DFB ID, 없는 binary, 잘못된 source_file, 잘못된 function 이름을 오류로 처리한다.
+```
+
 ### 19.2 생성 파이프라인
 
 manifest 기반 생성 절차는 아래 순서를 따른다.
@@ -2819,13 +2964,6 @@ add_executable(dfbench_win_core
     src/cases_import.c
 )
 
-add_executable(dfbench_posix_runtime
-    src/main.c
-    src/dfbench_runtime_posix.c
-    src/dfbench_sources_sinks.c
-    src/cases_runtime_bridge.c
-)
-
 add_executable(dfbench_cpp
     src/main.c
     src/dfbench_runtime_cpp.c
@@ -2833,47 +2971,65 @@ add_executable(dfbench_cpp
     cpp/cases_cpp.cpp
 )
 
-add_executable(dfbench_cpp_exceptions
-    src/main.c
-    src/dfbench_runtime_cpp_exceptions.c
-    src/dfbench_sources_sinks.c
-    cpp/cases_cpp_exceptions.cpp
+if (DFB_ENABLE_EXCEPTIONS)
+    add_executable(dfbench_cpp_exceptions
+        src/main.c
+        src/dfbench_runtime_cpp_exceptions.c
+        src/dfbench_sources_sinks.c
+        cpp/cases_cpp_exceptions.cpp
+    )
+endif()
+
+if (UNIX AND NOT APPLE AND DFB_ENABLE_THREADS)
+    add_executable(dfbench_posix_runtime
+        src/main.c
+        src/dfbench_runtime_posix.c
+        src/dfbench_sources_sinks.c
+        src/cases_runtime_bridge.c
+    )
+    target_link_libraries(dfbench_posix_runtime PRIVATE pthread)
+endif()
+
+set(DFB_EXECUTABLE_TARGETS
+    dfbench_win_core
+    dfbench_cpp
 )
 
-target_include_directories(dfbench_win_core PRIVATE include importlib)
-target_include_directories(dfbench_posix_runtime PRIVATE include importlib)
-target_include_directories(dfbench_cpp PRIVATE include importlib)
-target_include_directories(dfbench_cpp_exceptions PRIVATE include importlib)
+if (TARGET dfbench_cpp_exceptions)
+    list(APPEND DFB_EXECUTABLE_TARGETS dfbench_cpp_exceptions)
+endif()
+
+if (TARGET dfbench_posix_runtime)
+    list(APPEND DFB_EXECUTABLE_TARGETS dfbench_posix_runtime)
+endif()
+
+foreach (target_name IN LISTS DFB_EXECUTABLE_TARGETS)
+    target_include_directories(${target_name} PRIVATE include importlib)
+endforeach()
+
+set(DFB_ALL_TARGETS ${DFB_EXECUTABLE_TARGETS} dfbench_importlib)
 
 target_link_libraries(dfbench_win_core PRIVATE dfbench_importlib)
 
 if (MSVC)
-    target_compile_options(dfbench_win_core PRIVATE /W4)
-    target_compile_options(dfbench_posix_runtime PRIVATE /W4)
-    target_compile_options(dfbench_cpp PRIVATE /W4)
-    target_compile_options(dfbench_cpp_exceptions PRIVATE /W4)
-    target_compile_options(dfbench_importlib PRIVATE /W4)
+    foreach (target_name IN LISTS DFB_ALL_TARGETS)
+        target_compile_options(${target_name} PRIVATE /W4)
+    endforeach()
 else()
-    target_compile_options(dfbench_win_core PRIVATE -Wall -Wextra -Wno-unused-function)
-    target_compile_options(dfbench_posix_runtime PRIVATE -Wall -Wextra -Wno-unused-function)
-    target_compile_options(dfbench_cpp PRIVATE -Wall -Wextra -Wno-unused-function)
-    target_compile_options(dfbench_cpp_exceptions PRIVATE -Wall -Wextra -Wno-unused-function)
-    target_compile_options(dfbench_importlib PRIVATE -Wall -Wextra -Wno-unused-function)
+    foreach (target_name IN LISTS DFB_ALL_TARGETS)
+        target_compile_options(${target_name} PRIVATE -Wall -Wextra -Wno-unused-function)
+    endforeach()
 endif()
 
 if (DFB_NO_INLINE)
     if (MSVC)
-        target_compile_options(dfbench_win_core PRIVATE /Ob0)
-        target_compile_options(dfbench_posix_runtime PRIVATE /Ob0)
-        target_compile_options(dfbench_cpp PRIVATE /Ob0)
-        target_compile_options(dfbench_cpp_exceptions PRIVATE /Ob0)
-        target_compile_options(dfbench_importlib PRIVATE /Ob0)
+        foreach (target_name IN LISTS DFB_ALL_TARGETS)
+            target_compile_options(${target_name} PRIVATE /Ob0)
+        endforeach()
     else()
-        target_compile_options(dfbench_win_core PRIVATE -fno-inline -fno-inline-functions)
-        target_compile_options(dfbench_posix_runtime PRIVATE -fno-inline -fno-inline-functions)
-        target_compile_options(dfbench_cpp PRIVATE -fno-inline -fno-inline-functions)
-        target_compile_options(dfbench_cpp_exceptions PRIVATE -fno-inline -fno-inline-functions)
-        target_compile_options(dfbench_importlib PRIVATE -fno-inline -fno-inline-functions)
+        foreach (target_name IN LISTS DFB_ALL_TARGETS)
+            target_compile_options(${target_name} PRIVATE -fno-inline -fno-inline-functions)
+        endforeach()
     endif()
 endif()
 
@@ -2881,24 +3037,79 @@ if (DFB_ENABLE_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
     if (ipo_supported)
-        set_property(TARGET dfbench_win_core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-        set_property(TARGET dfbench_posix_runtime PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-        set_property(TARGET dfbench_cpp PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-        set_property(TARGET dfbench_cpp_exceptions PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-        set_property(TARGET dfbench_importlib PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+        foreach (target_name IN LISTS DFB_ALL_TARGETS)
+            set_property(TARGET ${target_name} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+        endforeach()
     endif()
 endif()
 
-if (UNIX AND NOT APPLE)
-    target_link_libraries(dfbench_posix_runtime PRIVATE pthread)
-endif()
-
 if (NOT MSVC)
-    target_link_options(dfbench_win_core PRIVATE -Wl,--export-dynamic)
-    target_link_options(dfbench_posix_runtime PRIVATE -Wl,--export-dynamic)
-    target_link_options(dfbench_cpp PRIVATE -Wl,--export-dynamic)
-    target_link_options(dfbench_cpp_exceptions PRIVATE -Wl,--export-dynamic)
+    foreach (target_name IN LISTS DFB_EXECUTABLE_TARGETS)
+        target_link_options(${target_name} PRIVATE -Wl,--export-dynamic)
+    endforeach()
 endif()
+```
+
+중요:
+
+```text
+- dfbench_posix_runtime은 Windows에서 생성하지 않는다.
+- Windows에서 POSIX 케이스를 direct fallback으로 바꾸어 빌드하면 안 된다.
+- POSIX 케이스는 POSIX 환경에서만 빌드하고, Windows 비교에서는 SKIP으로 취급한다.
+```
+
+파일: `CMakePresets.json`
+
+```json
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "win-debug",
+      "displayName": "Windows Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/win-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "DFB_NO_INLINE": "ON",
+        "DFB_ENABLE_LTO": "OFF",
+        "DFB_ENABLE_EXCEPTIONS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "win-release",
+      "displayName": "Windows Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/win-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "DFB_NO_INLINE": "ON",
+        "DFB_ENABLE_LTO": "OFF",
+        "DFB_ENABLE_EXCEPTIONS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win-debug",
+      "configurePreset": "win-debug"
+    },
+    {
+      "name": "win-release",
+      "configurePreset": "win-release"
+    }
+  ]
+}
 ```
 
 권장 사항:
@@ -3048,8 +3259,8 @@ if __name__ == "__main__":
 ```text
 cmake --preset win-debug
 cmake --build --preset win-debug
-./build/win-debug/dfbench_win_core --list
-./build/win-debug/dfbench_win_core --run-all
+.\build\win-debug\dfbench_win_core.exe --list
+.\build\win-debug\dfbench_win_core.exe --run-all
 ```
 
 구현 파일:
