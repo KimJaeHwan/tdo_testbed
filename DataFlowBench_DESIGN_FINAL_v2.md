@@ -620,29 +620,38 @@ int main(int argc, char **argv) {
 
 ```text
 1. direct-trace 검증용 케이스와 function-summary-ready 케이스를 같은 의미로 취급하지 않는다.
-2. function-summary-ready 케이스에서 실제 데이터 전달 관계는 별도 helper/callee 함수 안에 존재해야 한다.
-3. summary 대상 helper 함수 내부에는 직접 source나 sink를 두지 않는다.
-4. case_DFBxxx_* wrapper는 입력 준비, helper 호출, 결과 sink 연결만 담당한다.
-5. 함수 요약 DB의 ground truth는 summary-ready 케이스만을 기준으로 만든다.
+2. function-summary-ready 케이스에서는 어느 한 함수 안에도 직접 source와 sink가 동시에 공존하면 안 된다.
+3. 실제 데이터 전달 관계는 별도 helper/callee 함수 안에 존재해야 한다.
+4. summary 대상 helper 함수 내부에는 직접 source나 sink를 두지 않는다.
+5. case_DFBxxx_* wrapper는 source 준비 함수, helper 호출, sink 전달 함수만 조합하는 orchestration 역할만 맡는다.
+6. 함수 요약 DB의 ground truth는 summary-ready 케이스만을 기준으로 만든다.
 ```
 
 권장 패턴:
 
 ```c
+static int dfb_prepare_input(void) {
+    return dfb_source_A();
+}
+
 static int dfb_summary_target(const SomeType *in) {
     return in->field;
 }
 
+static void dfb_consume_output(int value) {
+    dfb_sink_int(value);
+}
+
 DFB_CASE void case_DFBxxx_example(void) {
     SomeType value;
-    value.field = dfb_source_A();
-    value.other = dfb_source_B();
+    value.field = dfb_prepare_input();
+    value.other = 0;
 
-    dfb_sink_int(dfb_summary_target(&value));
+    dfb_consume_output(dfb_summary_target(&value));
 }
 ```
 
-위 패턴에서 backward slice anchor는 wrapper에 있지만, 함수별 input/output 관계 자체는 helper 함수에 존재한다. 따라서 단일 추적 검증과 함수 summary DB 검증을 동시에 지원할 수 있다.
+위 패턴에서 source 준비 함수, summary 함수, sink 전달 함수가 서로 분리된다. 따라서 단일 추적 검증과 함수 summary DB 검증을 동시에 지원하면서도, 어느 한 함수에도 source와 sink를 같이 두지 않을 수 있다.
 
 ---
 
@@ -1371,14 +1380,26 @@ DFB_SOURCE int dfb_same_identity(int x) {
     return x;
 }
 
+static int dfb_callsite_context_source_A(void) {
+    return dfb_source_A();
+}
+
+static int dfb_callsite_context_source_B(void) {
+    return dfb_source_B();
+}
+
+static void dfb_callsite_context_sink(int value) {
+    dfb_sink_int(value);
+}
+
 DFB_CASE void case_DFB052_callsite_context(void) {
-    int a = dfb_source_A();
-    int b = dfb_source_B();
+    int a = dfb_callsite_context_source_A();
+    int b = dfb_callsite_context_source_B();
 
     int x = dfb_same_identity(a);
     int y = dfb_same_identity(b);
 
-    dfb_sink_int(x);
+    dfb_callsite_context_sink(x);
 
     /* y가 제거되지 않도록 사용 */
     DFB_TOUCH_INT(y);
@@ -1388,13 +1409,19 @@ DFB_CASE void case_DFB052_callsite_context(void) {
 기대 흐름:
 
 ```text
-dfb_source_A.ret -> sink
+dfb_source_A.ret -> dfb_callsite_context_source_A.ret -> selected callsite arg0 -> dfb_same_identity.arg0 -> dfb_same_identity.ret -> dfb_callsite_context_sink.arg0 -> dfb_sink_int.arg0
 ```
 
 금지 흐름:
 
 ```text
-dfb_source_B.ret must not reach sink
+dfb_source_B.ret -> dfb_callsite_context_source_B.ret -> unselected callsite arg0 -> dfb_same_identity.arg0 -> dfb_same_identity.ret must not reach dfb_sink_int.arg0
+```
+
+권장 summary:
+
+```text
+dfb_same_identity: arg0 -> ret
 ```
 
 ---
