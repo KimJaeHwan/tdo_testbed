@@ -109,7 +109,10 @@ else()
     endforeach()
 endif()
 
-# Force noinline
+# Force noinline + strict-aliasing safety
+# -fno-strict-aliasing: protects DFB041 (pointer arithmetic through char*)
+#   where the compiler could otherwise discard the write as a non-aliasing store.
+# -fno-inline*: belt-and-suspenders on top of per-function __attribute__((noinline)).
 if(DFB_NO_INLINE)
     if(MSVC)
         foreach(target_name IN LISTS DFB_ALL_TARGETS)
@@ -117,9 +120,22 @@ if(DFB_NO_INLINE)
         endforeach()
     else()
         foreach(target_name IN LISTS DFB_ALL_TARGETS)
-            target_compile_options(${target_name} PRIVATE -fno-inline -fno-inline-functions)
+            target_compile_options(${target_name} PRIVATE
+                -fno-inline
+                -fno-inline-functions
+                -fno-strict-aliasing
+            )
         endforeach()
     endif()
+endif()
+
+# Cap Release builds at -O2 (GCC/Clang default for Release is -O3 which enables
+# more aggressive value-propagation that can collapse multi-step data flows).
+# This keeps the "O2_NOINLINE" variant from design doc.
+if(NOT MSVC AND CMAKE_BUILD_TYPE STREQUAL "Release")
+    foreach(target_name IN LISTS DFB_ALL_TARGETS)
+        target_compile_options(${target_name} PRIVATE -O2)
+    endforeach()
 endif()
 
 # LTO
