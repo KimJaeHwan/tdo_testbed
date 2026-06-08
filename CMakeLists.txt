@@ -40,6 +40,7 @@ add_executable(dfbench_win_core
     src/cases_exceptional.c
     src/cases_runtime_bridge.c
     src/cases_import.c
+    src/cases_obfuscation.c
 )
 target_link_libraries(dfbench_win_core PRIVATE dfbench_importlib)
 
