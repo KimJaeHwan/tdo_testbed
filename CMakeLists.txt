@@ -138,6 +138,7 @@ if(NOT MSVC AND CMAKE_BUILD_TYPE STREQUAL "Release")
     endforeach()
 endif()
 
+
 # LTO
 if(DFB_ENABLE_LTO)
     include(CheckIPOSupported)
