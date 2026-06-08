@@ -925,6 +925,47 @@
         "outparam"
       ],
       "allowed_warnings": []
+    },
+    {
+      "id": "DFB200",
+      "binary": "dfbench_win_core",
+      "function": "case_DFB200_obf_bcf_multistep",
+      "anchor": {
+        "callee": "dfb_sink_int",
+        "arg_index": 0
+      },
+      "expected_sources": [
+        "dfb_source_A.ret",
+        "dfb_source_B.ret"
+      ],
+      "forbidden_sources": [],
+      "expected_features": [
+        "obfuscation",
+        "bogus_control_flow",
+        "opaque_predicate",
+        "dead_branch"
+      ],
+      "allowed_warnings": []
+    },
+    {
+      "id": "DFB201",
+      "binary": "dfbench_win_core",
+      "function": "case_DFB201_obf_fla_statemachine",
+      "anchor": {
+        "callee": "dfb_sink_int",
+        "arg_index": 0
+      },
+      "expected_sources": [
+        "dfb_source_A.ret",
+        "dfb_source_C.ret"
+      ],
+      "forbidden_sources": [],
+      "expected_features": [
+        "obfuscation",
+        "control_flow_flattening",
+        "state_machine"
+      ],
+      "allowed_warnings": []
     }
   ]
 }
