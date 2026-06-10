@@ -1,5 +1,5 @@
 /*
- * cases_offset.c — Offset-level tracking test cases (DFB034, DFB047-DFB049)
+ * cases_offset.c — Offset-level tracking test cases (DFB034-DFB035, DFB047-DFB049)
  *
  * These cases focus on address-computation PCode ops:
  *   PTRSUB / PTRADD / INT_ADD / INT_SUB / SUBPIECE
@@ -44,6 +44,35 @@ typedef struct DFBBitPacked {
 
 DFB_CASE void case_DFB034_bitfield_access(void) {
     DFBBitPacked bp;
+    bp.flags = (unsigned)dfb_source_A() & 0xfU;   /* bits 0-3 */
+    bp.value = (unsigned)dfb_source_B() & 0xfU;   /* bits 4-7 */
+    dfb_sink_int((int)bp.value);                   /* ground truth: source_B only */
+}
+
+/* -----------------------------------------------------------------------
+ * DFB035: bitfield_access_zeroinit
+ *
+ * Identical to DFB034 except bp is zero-initialized (= {0}).
+ * Comparison case: tests whether zero-initialization changes Ghidra's High PCode
+ * representation of the bitfield read-modify-write sequence.
+ *
+ * DFB034 (uninitialized):
+ *   CALL dfb_source_A out=null  +  INDIRECT out=stack:0x-38 in=[stack:0x-38, seqno]
+ *   CALL dfb_source_B out=null  +  INDIRECT out=stack:0x-38 in=[stack:0x-38, seqno]
+ *   CALL dfb_sink_int            in=[..., stack:0x-38]
+ *   -> Ghidra drops source return values; sink receives uninitialized stack varnode.
+ *
+ * DFB035 (= {0} initialized):
+ *   Hypothesis: the zero initializer anchors the stack varnode SSA chain.
+ *   Ghidra may promote the source return values into the INDIRECT output or
+ *   reconstruct the mask/shift arithmetic, changing the PCode shape.
+ *   -> Actual behavior to be confirmed by pcode_dumper.py run.
+ *
+ * Expected slicer behavior: UNCERTAIN — depends on whether zero-init causes
+ *   Ghidra to surface the CALL return varnodes in the data-flow chain.
+ * ----------------------------------------------------------------------- */
+DFB_CASE void case_DFB035_bitfield_access_zeroinit(void) {
+    DFBBitPacked bp = {0};                         /* explicit zero-initialization */
     bp.flags = (unsigned)dfb_source_A() & 0xfU;   /* bits 0-3 */
     bp.value = (unsigned)dfb_source_B() & 0xfU;   /* bits 4-7 */
     dfb_sink_int((int)bp.value);                   /* ground truth: source_B only */

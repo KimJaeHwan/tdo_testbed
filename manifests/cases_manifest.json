@@ -655,7 +655,20 @@
             "forbidden_sources": ["dfb_source_A.ret"],
             "expected_features": ["struct", "bitfield", "subpiece", "bit_range"],
             "allowed_warnings": ["unresolved_bitfield"],
-            "_slicer_note": "FAIL expected: SUBPIECE+shift read-modify-write byte merge — bit-range analysis not implemented"
+            "_slicer_note": "FAIL: Ghidra emits CALL out=null + INDIRECT for uninitialized bitfield RMW; sink receives undefined stack varnode, no source reached"
+        },
+        {
+            "id": "DFB035",
+            "name": "bitfield_access_zeroinit",
+            "binary": "dfbench_win_core",
+            "source_file": "src/cases_offset.c",
+            "function": "case_DFB035_bitfield_access_zeroinit",
+            "anchor": {"callee": "dfb_sink_int", "arg_index": 0},
+            "expected_sources": ["dfb_source_B.ret"],
+            "forbidden_sources": ["dfb_source_A.ret"],
+            "expected_features": ["struct", "bitfield", "subpiece", "bit_range", "zeroinit"],
+            "allowed_warnings": ["unresolved_bitfield"],
+            "_slicer_note": "UNCERTAIN: comparison case for DFB034 — zero-init may anchor SSA chain and surface CALL return varnodes in Ghidra PCode; actual shape TBD via pcode_dumper"
         },
         {
             "id": "DFB047",
