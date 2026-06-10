@@ -38,3 +38,24 @@ DFB_CASE void case_DFB031_heap_realloc_preserve(void) {
 
     free(buf);
 }
+
+/* DFB032: heap_raw_offset
+ * Tests raw pointer arithmetic on a heap-allocated buffer (not a struct cast).
+ * malloc returns heap_buf; payload = heap_buf + 20 uses INT_ADD/PTRADD at High PCode.
+ * The slicer must identify that STORE(heap_buf+20) and LOAD(heap_buf+20) share the
+ * same base varnode + same offset — without a stack-frame (RSP-relative) anchor.
+ * Current slicer: heap base varnode tracking is not implemented -> FAIL expected.
+ */
+DFB_CASE void case_DFB032_heap_raw_offset(void) {
+    char *heap_buf = (char *)malloc(100);
+    if (!heap_buf) {
+        return;
+    }
+
+    int *payload = (int *)(heap_buf + 20);   /* raw +20 byte offset into heap buffer */
+    *payload = dfb_source_A();
+
+    dfb_sink_int(*(int *)(heap_buf + 20));   /* read back same offset */
+
+    free(heap_buf);
+}
