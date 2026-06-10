@@ -55,6 +55,12 @@ DFB_EXTERN_C void case_DFB130_shared_import_arg_to_ret(void);
 DFB_EXTERN_C void case_DFB131_shared_import_outparam(void);
 DFB_EXTERN_C void case_DFB200_obf_bcf_multistep(void);
 DFB_EXTERN_C void case_DFB201_obf_fla_statemachine(void);
+DFB_EXTERN_C void case_DFB032_heap_raw_offset(void);
+DFB_EXTERN_C void case_DFB034_bitfield_access(void);
+DFB_EXTERN_C void case_DFB035_bitfield_access_zeroinit(void);
+DFB_EXTERN_C void case_DFB047_struct_padding_offset(void);
+DFB_EXTERN_C void case_DFB048_cast_range_overlap(void);
+DFB_EXTERN_C void case_DFB049_negative_offset_arithmetic(void);
 
 static const dfb_case_entry_t g_cases[] = {
     {"DFB001", "direct_value", case_DFB001_direct_value},
@@ -107,6 +113,12 @@ static const dfb_case_entry_t g_cases[] = {
     {"DFB131", "shared_import_outparam", case_DFB131_shared_import_outparam},
     {"DFB200", "obf_bcf_multistep", case_DFB200_obf_bcf_multistep},
     {"DFB201", "obf_fla_statemachine", case_DFB201_obf_fla_statemachine},
+    {"DFB032", "heap_raw_offset", case_DFB032_heap_raw_offset},
+    {"DFB034", "bitfield_access", case_DFB034_bitfield_access},
+    {"DFB035", "bitfield_access_zeroinit", case_DFB035_bitfield_access_zeroinit},
+    {"DFB047", "struct_padding_offset", case_DFB047_struct_padding_offset},
+    {"DFB048", "cast_range_overlap", case_DFB048_cast_range_overlap},
+    {"DFB049", "negative_offset_arithmetic", case_DFB049_negative_offset_arithmetic},
 };
 
 const dfb_case_entry_t *dfb_get_cases(size_t *count) {
