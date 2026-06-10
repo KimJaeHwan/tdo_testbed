@@ -668,7 +668,7 @@
             "forbidden_sources": ["dfb_source_A.ret"],
             "expected_features": ["struct", "bitfield", "subpiece", "bit_range", "zeroinit"],
             "allowed_warnings": ["unresolved_bitfield"],
-            "_slicer_note": "UNCERTAIN: comparison case for DFB034 — zero-init may anchor SSA chain and surface CALL return varnodes in Ghidra PCode; actual shape TBD via pcode_dumper"
+            "_slicer_note": "FAIL (confirmed): zero-init produces identical PCode to DFB034 — CALL out=null + INDIRECT pattern unchanged; Ghidra bitfield representation is init-independent"
         },
         {
             "id": "DFB047",
