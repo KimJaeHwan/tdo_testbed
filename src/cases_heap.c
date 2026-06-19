@@ -59,3 +59,13 @@ DFB_CASE void case_DFB032_heap_raw_offset(void) {
 
     free(heap_buf);
 }
+
+/* DFB033 — two pointers to the same alloc-site; write via p, read via q */
+DFB_CASE void case_DFB033_heap_alias_two_pointers(void) {
+    int *p = (int *)malloc(sizeof(int) * 2);
+    if (!p) return;
+    int *q = p;                  /* must-alias: same alloc-site */
+    p[0] = dfb_source_A();
+    dfb_sink_int(q[0]);          /* ground truth: source_A */
+    free(p);
+}

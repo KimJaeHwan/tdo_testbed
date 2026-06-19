@@ -43,3 +43,27 @@ DFB_CASE void case_DFB102_signed_unsigned_boundary(void) {
     DFB_TOUCH_INT(noise);
     dfb_sink_int(d);
 }
+
+/* DFB151 — callee reads only its third argument; first two are unused */
+DFB_HELPER int dfb_returns_third(int a, int b, int c) {
+    (void)a; (void)b;
+    return c;
+}
+
+DFB_CASE void case_DFB151_selective_arg_passthrough(void) {
+    int x = dfb_source_A();   /* unused by callee */
+    int y = dfb_source_B();   /* unused by callee */
+    int z = dfb_source_C();   /* used */
+    dfb_sink_int(dfb_returns_third(x, y, z));   /* ground truth: source_C */
+}
+
+/* DFB152 — callee ignores its argument and creates its own source internally */
+DFB_HELPER int dfb_ignores_input(int ignored) {
+    (void)ignored;
+    return dfb_source_A();
+}
+
+DFB_CASE void case_DFB152_callee_use_before_def(void) {
+    int noise = dfb_source_B();
+    dfb_sink_int(dfb_ignores_input(noise));   /* ground truth: source_A */
+}

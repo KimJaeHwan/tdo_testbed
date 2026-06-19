@@ -61,6 +61,25 @@ DFB_EXTERN_C void case_DFB035_bitfield_access_zeroinit(void);
 DFB_EXTERN_C void case_DFB047_struct_padding_offset(void);
 DFB_EXTERN_C void case_DFB048_cast_range_overlap(void);
 DFB_EXTERN_C void case_DFB049_negative_offset_arithmetic(void);
+DFB_EXTERN_C void case_DFB004_no_source_constant(void);
+DFB_EXTERN_C void case_DFB005_overwrite_kill(void);
+DFB_EXTERN_C void case_DFB006_multi_source_convergence(void);
+DFB_EXTERN_C void case_DFB007_subregister_alias(void);
+DFB_EXTERN_C void case_DFB013_unbounded_loop_widen(void);
+DFB_EXTERN_C void case_DFB014_control_only_dependency(void);
+DFB_EXTERN_C void case_DFB016_memory_phi(void);
+DFB_EXTERN_C void case_DFB027_global_readonly_source(void);
+DFB_EXTERN_C void case_DFB033_heap_alias_two_pointers(void);
+DFB_EXTERN_C void case_DFB061_non_tail_recursion(void);
+DFB_EXTERN_C void case_DFB062_mutual_recursion(void);
+DFB_EXTERN_C void case_DFB063_recursion_global_effect(void);
+DFB_EXTERN_C void case_DFB064_indirect_recursion(void);
+DFB_EXTERN_C void case_DFB065_tree_recursion(void);
+DFB_EXTERN_C void case_DFB066_swap_target_independence(void);
+DFB_EXTERN_C void case_DFB074_unresolved_indirect(void);
+DFB_EXTERN_C void case_DFB075_unresolved_call_boundary(void);
+DFB_EXTERN_C void case_DFB151_selective_arg_passthrough(void);
+DFB_EXTERN_C void case_DFB152_callee_use_before_def(void);
 
 static const dfb_case_entry_t g_cases[] = {
     {"DFB001", "direct_value", case_DFB001_direct_value},
@@ -119,6 +138,25 @@ static const dfb_case_entry_t g_cases[] = {
     {"DFB047", "struct_padding_offset", case_DFB047_struct_padding_offset},
     {"DFB048", "cast_range_overlap", case_DFB048_cast_range_overlap},
     {"DFB049", "negative_offset_arithmetic", case_DFB049_negative_offset_arithmetic},
+    {"DFB004", "no_source_constant", case_DFB004_no_source_constant},
+    {"DFB005", "overwrite_kill", case_DFB005_overwrite_kill},
+    {"DFB006", "multi_source_convergence", case_DFB006_multi_source_convergence},
+    {"DFB007", "subregister_alias", case_DFB007_subregister_alias},
+    {"DFB013", "unbounded_loop_widen", case_DFB013_unbounded_loop_widen},
+    {"DFB014", "control_only_dependency", case_DFB014_control_only_dependency},
+    {"DFB016", "memory_phi", case_DFB016_memory_phi},
+    {"DFB027", "global_readonly_source", case_DFB027_global_readonly_source},
+    {"DFB033", "heap_alias_two_pointers", case_DFB033_heap_alias_two_pointers},
+    {"DFB061", "non_tail_recursion", case_DFB061_non_tail_recursion},
+    {"DFB062", "mutual_recursion", case_DFB062_mutual_recursion},
+    {"DFB063", "recursion_global_effect", case_DFB063_recursion_global_effect},
+    {"DFB064", "indirect_recursion", case_DFB064_indirect_recursion},
+    {"DFB065", "tree_recursion", case_DFB065_tree_recursion},
+    {"DFB066", "swap_target_independence", case_DFB066_swap_target_independence},
+    {"DFB074", "unresolved_indirect", case_DFB074_unresolved_indirect},
+    {"DFB075", "unresolved_call_boundary", case_DFB075_unresolved_call_boundary},
+    {"DFB151", "selective_arg_passthrough", case_DFB151_selective_arg_passthrough},
+    {"DFB152", "callee_use_before_def", case_DFB152_callee_use_before_def},
 };
 
 const dfb_case_entry_t *dfb_get_cases(size_t *count) {

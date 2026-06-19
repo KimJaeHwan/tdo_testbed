@@ -190,3 +190,16 @@ DFB_CASE void case_DFB060_recursion(void) {
     int b = dfb_recursive_transform(a, 3);
     dfb_sink_int(b);
 }
+
+/* DFB066 — swap via two out-params; x receives source_B after the swap */
+DFB_HELPER void dfb_swap(int *p, int *q) {
+    int t = *p; *p = *q; *q = t;
+}
+
+DFB_CASE void case_DFB066_swap_target_independence(void) {
+    int x = dfb_source_A();
+    int y = dfb_source_B();
+    dfb_swap(&x, &y);
+    dfb_sink_int(x);      /* ground truth: source_B (was in y before swap) */
+    DFB_TOUCH_INT(y);     /* y = source_A after swap */
+}
