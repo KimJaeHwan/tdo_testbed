@@ -52,17 +52,18 @@ dataflow-bench/
 │   ├── main.c                  CLI 진입점 (--list / --run-all / --run)
 │   ├── dfbench_sources_sinks.c source/sink 함수 구현
 │   │
-│   ├── cases_basic.c           DFB001-003
-│   ├── cases_control_flow.c    DFB010-012
+│   ├── cases_basic.c           DFB001-007
+│   ├── cases_control_flow.c    DFB010-016
 │   ├── cases_stack.c           DFB020-023
-│   ├── cases_global.c          DFB024-026
-│   ├── cases_heap.c            DFB030-031
+│   ├── cases_global.c          DFB024-027
+│   ├── cases_heap.c            DFB030-033
 │   ├── cases_struct.c          DFB040-042, DFB046
 │   ├── cases_array.c           DFB043-045
-│   ├── cases_interproc.c       DFB050-060
-│   ├── cases_indirect.c        DFB070-073
+│   ├── cases_interproc.c       DFB050-060, DFB066
+│   ├── cases_indirect.c        DFB070-075
+│   ├── cases_recursion.c       DFB061-065
 │   ├── cases_runtime_bridge.c  DFB091 (TLS), DFB090/DFB092 (POSIX only)
-│   ├── cases_abi.c             DFB100-102
+│   ├── cases_abi.c             DFB100-102, DFB151-152
 │   ├── cases_exceptional.c     DFB110
 │   ├── cases_memory_api.c      DFB120-123
 │   ├── cases_import.c          DFB130-131
@@ -79,7 +80,7 @@ dataflow-bench/
 │
 ├── importlib/
 │   ├── dfbench_importlib.h     공유 라이브러리 헤더 (DLL export/import 매크로)
-│   └── dfbench_importlib.c     dfb_import_identity, dfb_import_write_out 구현
+│   └── dfbench_importlib.c     dfb_import_identity, dfb_import_write_out, dfb_get_opaque_fn, dfb_external_no_summary 구현
 │
 ├── manifests/
 │   └── cases_manifest.json     ★ 유일한 정답 원본 — 모든 케이스 정의
@@ -133,7 +134,7 @@ cmake --build --preset win-release
 산출물:
 ```
 build/win-debug/
-├── dfbench_win_core.exe        Windows 핵심 케이스 48개
+├── dfbench_win_core.exe        Windows 핵심 케이스 75개
 ├── dfbench_cpp.exe             C++ 케이스 2개
 ├── dfbench_cpp_exceptions.exe  C++ 예외 케이스 1개
 └── libdfbench_importlib.dll    공유 라이브러리
@@ -268,21 +269,22 @@ build/linux-native-debug/   ← Ghidra에서 ELF로 분석
 
 ## 7. 케이스 목록 및 카테고리
 
-### dfbench_win_core (48개)
+### dfbench_win_core (75개)
 
 | ID 범위 | 파일 | 테스트 주제 |
 |---|---|---|
-| DFB001–003 | cases_basic.c | 직접 값, 산술, 타입 캐스트 |
-| DFB010–012 | cases_control_flow.c | Branch/Loop/Switch PHI 노드 |
+| DFB001–007 | cases_basic.c | 직접 값, 산술, 타입 캐스트, true-negative, kill, 멀티 소스, 서브레지스터 |
+| DFB010–016 | cases_control_flow.c | Branch/Loop/Switch PHI, 루프 widening, 제어 의존성, 메모리 PHI |
 | DFB020–023 | cases_stack.c | 스택 로컬, out-param, 이중 포인터 |
-| DFB024–026 | cases_global.c | 전역 변수 흐름, 필드 정밀도 |
-| DFB030–031 | cases_heap.c | 힙 필드, realloc 후 보존 |
+| DFB024–027 | cases_global.c | 전역 변수 흐름, 필드 정밀도, 읽기 전용 전역 |
+| DFB030–033 | cases_heap.c | 힙 필드, realloc 후 보존, 힙 포인터 별칭 |
 | DFB040–042, 046 | cases_struct.c | 구조체 필드, 포인터 산술, 유니온, 부분 덮어쓰기 |
 | DFB043–045 | cases_array.c | 배열 상수/변수 인덱스, 중첩 집합체 |
-| DFB050–060 | cases_interproc.c | 인터프로시저: identity, 중첩 호출, 컨텍스트 민감성, sret, 재귀, 함수 요약 |
-| DFB070–073 | cases_indirect.c | 함수 포인터, 콜백, FP 테이블, 간접 싱크 |
+| DFB050–060, 066 | cases_interproc.c | 인터프로시저: identity, 중첩 호출, 컨텍스트 민감성, sret, 함수 요약, swap |
+| DFB061–065 | cases_recursion.c | 재귀: 비꼬리, 상호 재귀 SCC, 전역 사이드 이펙트, 간접 재귀, 트리 재귀 |
+| DFB070–075 | cases_indirect.c | 함수 포인터, 콜백, FP 테이블, 간접 싱크, CALLIND 미해석, 외부 경계 |
 | DFB091 | cases_runtime_bridge.c | TLS (Thread-Local Storage) |
-| DFB100–102 | cases_abi.c | varargs, tail call, 부호/비부호 경계 |
+| DFB100–102, 151–152 | cases_abi.c | varargs, tail call, 부호/비부호 경계, 선택적 인자 통과, callee 내부 소스 |
 | DFB110 | cases_exceptional.c | setjmp/longjmp |
 | DFB120–123 | cases_memory_api.c | memcpy, memmove, strcpy, memset+memcpy |
 | DFB130–131 | cases_import.c | 공유 라이브러리 import (arg→ret, out-param) |
@@ -345,7 +347,8 @@ DFB_CASE void case_DFB004_my_new_case(void) {
     "expected_sources": ["dfb_source_A.ret"],
     "forbidden_sources": [],
     "expected_features": ["my_feature"],
-    "allowed_warnings": []
+    "allowed_warnings": [],
+    "required_warnings": []
 }
 ```
 
@@ -396,7 +399,7 @@ manifests/cases_manifest.json  (수동 편집 대상)
 
 | 실행파일 | 빌드 환경 | 포함 케이스 |
 |---|---|---|
-| dfbench_win_core.exe | Windows / Linux 크로스 | DFB001-073, DFB091, DFB100-131 |
+| dfbench_win_core.exe | Windows / Linux 크로스 | DFB001-075, DFB091, DFB100-102, DFB130-131, DFB151-152 |
 | dfbench_cpp.exe | Windows / Linux 크로스 | DFB080, DFB081 |
 | dfbench_cpp_exceptions.exe | Windows / Linux 크로스 | DFB111 |
 | dfbench_posix_runtime | Linux 네이티브만 | DFB090, DFB092 |
@@ -429,7 +432,12 @@ DataFlowBench 자체는 판정을 수행하지 않는다. 외부 비교 엔진�
 - 케이스 함수가 바이너리 심볼 테이블에 없음
 - 분석기 크래시
 
-### WARN (allowed_warnings 목록에 있으면 PASS 처리)
+### WARN
+
+WARN은 두 가지 역할을 한다.
+
+- **`allowed_warnings`** 에 나열된 태그: 발생하면 FAIL → PASS로 완화
+- **`required_warnings`** 에 나열된 태그: 반드시 발생해야 PASS (누락 시 FAIL)
 
 | 태그 | 의미 |
 |---|---|
@@ -440,6 +448,10 @@ DataFlowBench 자체는 판정을 수행하지 않는다. 외부 비교 엔진�
 | `unresolved_thread_dispatch` | 스레드 디스패치 미해석, source taint 보존됨 |
 | `variable_index_conservative` | 변수 인덱스 배열 보수적 merge, source taint 보존됨 |
 | `unresolved_exception_flow` | 예외 흐름 미해석, 전역 경유로 taint 보존됨 |
+| `widened_unknown` | 루프 반복 중 값이 widened_unknown으로 확장됨, 진입 taint 보존됨 |
+| `recursive_summary_unavailable` | 재귀 함수 요약 미완성 (fixed-point 미수렴), 보수적으로 taint 보존됨 |
+| `unresolved_indirect_call` | 함수 포인터 타겟 정적 미해석, taint propagation 불확실 (DFB074) |
+| `unresolved_call_boundary` | 외부 라이브러리 경계에서 요약 없음, taint propagation 불확실 (DFB075) |
 
 ### SKIP
 - 해당 플랫폼에서 빌드되지 않은 실행파일 (예: Windows에서 dfbench_posix_runtime)
