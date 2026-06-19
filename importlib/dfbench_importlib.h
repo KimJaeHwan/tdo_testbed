@@ -19,3 +19,10 @@
 
 DFB_EXTERN_C DFB_IMPORT_API DFB_NOINLINE int  dfb_import_identity(int x);
 DFB_EXTERN_C DFB_IMPORT_API DFB_NOINLINE void dfb_import_write_out(int *out, int value);
+
+/* DFB074: returns a function pointer — callers dispatch via CALLIND */
+typedef int (*dfb_opaque_fn_t)(int);
+DFB_EXTERN_C DFB_IMPORT_API DFB_NOINLINE dfb_opaque_fn_t dfb_get_opaque_fn(void);
+
+/* DFB075: opaque passthrough — slicer has no summary for this function */
+DFB_EXTERN_C DFB_IMPORT_API DFB_NOINLINE int dfb_external_no_summary(int x);
