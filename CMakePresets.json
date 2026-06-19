@@ -52,6 +52,20 @@
       }
     },
     {
+      "name": "win-cross-x86-debug",
+      "displayName": "Windows PE x86 (mingw-w64 cross, Linux host)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/win-cross-x86-debug",
+      "toolchainFile": "${sourceDir}/toolchains/mingw-w64-x86.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "DFB_NO_INLINE": "ON",
+        "DFB_ENABLE_LTO": "OFF",
+        "DFB_ENABLE_EXCEPTIONS": "ON",
+        "DFB_TARGET_POSIX": "OFF"
+      }
+    },
+    {
       "name": "linux-native-debug",
       "displayName": "Linux Native Debug (POSIX runtime)",
       "generator": "Ninja",
@@ -63,12 +77,28 @@
         "DFB_ENABLE_THREADS": "ON",
         "DFB_TARGET_POSIX": "ON"
       }
+    },
+    {
+      "name": "linux-docker-debug",
+      "displayName": "Linux Docker Debug (current container architecture)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/docker-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "DFB_NO_INLINE": "ON",
+        "DFB_ENABLE_LTO": "OFF",
+        "DFB_ENABLE_EXCEPTIONS": "ON",
+        "DFB_ENABLE_THREADS": "ON",
+        "DFB_TARGET_POSIX": "ON"
+      }
     }
   ],
   "buildPresets": [
     {"name": "win-debug",           "configurePreset": "win-debug"},
     {"name": "win-release",         "configurePreset": "win-release"},
     {"name": "win-cross-debug",     "configurePreset": "win-cross-debug"},
-    {"name": "linux-native-debug",  "configurePreset": "linux-native-debug"}
+    {"name": "win-cross-x86-debug", "configurePreset": "win-cross-x86-debug"},
+    {"name": "linux-native-debug",  "configurePreset": "linux-native-debug"},
+    {"name": "linux-docker-debug",  "configurePreset": "linux-docker-debug"}
   ]
 }

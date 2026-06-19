@@ -112,12 +112,101 @@ dataflow-bench/
 
 ## 3. 빌드 방법
 
+### 빌드 없이 사용
+
+GitHub Releases에 미리 빌드된 산출물을 업로드한다.
+
+| Asset | 내용 |
+|---|---|
+| `dfbench-linux-elf-multiarch.tar.gz` | Linux ELF x86, x64, ARM, ARM64 |
+| `dfbench-windows-pe-x86-x64.tar.gz` | Windows PE x86, x64 |
+| `SHA256SUMS` | 릴리스 asset 체크섬 |
+
+압축 파일 내부의 각 플랫폼 디렉터리는 다음 구조를 가진다.
+
+```
+<platform>/
+├── build/                      실행 파일, DLL/SO, CMake/Ninja 메타데이터
+├── expected/                   expected JSON
+├── build-info.txt              빌드 대상 메타데이터
+└── artifact-file-types.txt     file(1) 판별 결과
+```
+
 ### 사전 준비
 
 | 환경 | 필요 도구 |
 |---|---|
+| macOS / Docker | Docker Desktop (Buildx 포함) |
 | Windows | CMake 3.20+, Ninja, MinGW-w64 또는 MSVC, Python 3.8+ |
 | Linux (전체) | CMake 3.20+, Ninja, gcc, g++, mingw-w64, Python 3.8+ |
+
+### macOS / Docker — Linux multi-arch
+
+macOS 호스트에서는 Docker Buildx를 사용해 여러 Linux 아키텍처용 ELF 바이너리를 빌드할 수 있다.
+
+```bash
+./scripts/docker_build_matrix.sh
+```
+
+기본 빌드 대상:
+
+| 논리 이름 | Docker platform | 출력 예 |
+|---|---|---|
+| x86 | `linux/386` | `dist/docker-linux/linux_386/` |
+| x64 | `linux/amd64` | `dist/docker-linux/linux_amd64/` |
+| arm | `linux/arm/v7` | `dist/docker-linux/linux_arm_v7/` |
+| arm64 | `linux/arm64` | `dist/docker-linux/linux_arm64/` |
+
+각 플랫폼 빌드는 `docker/linux/Dockerfile` 안에서 다음 순서로 수행된다.
+
+1. Debian 기반 빌드 도구 설치
+2. `tools/validate_manifest.py`
+3. `tools/generate_registry_from_manifest.py`
+4. `tools/generate_expected_from_manifest.py`
+5. CMake/Ninja Debug 빌드
+6. `tests/smoke_test.py`
+7. 빌드 산출물과 expected JSON을 `dist/docker-linux/`로 export
+
+필요하면 환경 변수로 동작을 조정한다.
+
+```bash
+# smoke test 생략
+DFB_RUN_SMOKE=0 ./scripts/docker_build_matrix.sh
+
+# 일부 플랫폼만 빌드
+DFB_DOCKER_PLATFORMS=linux/amd64,linux/arm64 ./scripts/docker_build_matrix.sh
+
+# 출력 디렉터리 지정
+./scripts/docker_build_matrix.sh /tmp/dfbench-artifacts
+```
+
+### macOS / Windows / Docker — Windows PE
+
+Docker Desktop의 Linux 컨테이너 모드를 사용하면 macOS와 Windows에서 같은 방식으로 Windows PE 바이너리를 빌드할 수 있다. 컨테이너 내부에서는 Debian + MinGW-w64 크로스컴파일러를 사용한다.
+
+```bash
+./scripts/docker_build_pe.sh
+```
+
+기본 빌드 대상:
+
+| 논리 이름 | CMake preset | 출력 예 |
+|---|---|---|
+| x86 | `win-cross-x86-debug` | `dist/docker-windows-pe/windows_pe_x86/` |
+| x64 | `win-cross-debug` | `dist/docker-windows-pe/windows_pe_x64/` |
+
+각 대상은 manifest 검증, 런타임 레지스트리 생성, expected JSON 생성 후 MinGW-w64로 PE 실행 파일과 DLL을 생성한다.
+
+```bash
+# x64 PE만 빌드
+DFB_PE_TARGETS=x64 ./scripts/docker_build_pe.sh
+
+# x86 PE만 빌드
+DFB_PE_TARGETS=x86 ./scripts/docker_build_pe.sh
+
+# 출력 디렉터리 지정
+./scripts/docker_build_pe.sh /tmp/dfbench-pe-artifacts
+```
 
 ### Windows — 네이티브 빌드
 
